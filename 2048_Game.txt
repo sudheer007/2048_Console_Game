@@ -1,0 +1,299 @@
+// 2048 game simulation attempt 1
+// Goal: achieve a functioning engine
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
+#include <ctime>
+#include <chrono>
+#include <conio.h>
+#include <iomanip>
+using std::cout;
+using std::endl;
+using std::cin;
+using std::ifstream;
+using std::ofstream;
+const int BOARD_HEIGHT = 4;
+const int BOARD_LENGHT = 4;
+int score = 0;
+bool is_processing = false;
+int board[BOARD_HEIGHT][BOARD_LENGHT]{};
+enum class Game_state {WON, LOST, UNDET,};
+enum class Command_state{EMPTY, LEFT, RIGHT, UP, DOWN};
+Game_state game_state = Game_state::UNDET;
+Command_state command_state = Command_state::EMPTY;
+void generate_rand_key();
+void print_state();
+char get_user_command();
+bool is_full();
+bool move_keys(int [][BOARD_LENGHT]);
+void start_game();
+bool is_lost();
+bool is_continuing();
+int main() {
+	srand(time(0));
+	cout << "Hit Enter To Start The Game"
+		 << "\nPress\'Q\' to quit...\n\n";
+	cin.get();
+	start_game();
+	system("CLS");
+	print_state();
+	cout << "\n\n" << (game_state == Game_state::WON ?
+		    "You WON!\n" : "You lost.\n");
+	int last_high_score;
+	ifstream in_score_sheet("score_sheet.txt");
+	if (!in_score_sheet) {
+		cout << "in\n"; exit(1);
+	}
+	in_score_sheet >> last_high_score;
+	in_score_sheet.close();
+	if (score > last_high_score) {
+		ofstream to_score_sheet("score_sheet.txt", std::ofstream::trunc);
+		if (!to_score_sheet) exit(1);
+		to_score_sheet << score;
+		to_score_sheet.close();
+	}
+	if (score >= last_high_score) {
+		cout << "\nNew Personal Best Score!:  " << score;
+		cout << "\nPrevious Personal Best:    " << last_high_score << endl;
+	}
+	system("pause"); // for release
+	return 0;
+}
+void generate_rand_key()
+{
+	int rand_key_x;
+	int rand_key_y;
+	int rand_key = rand() % 2 == 1 ? 2 : 4;
+	do {
+		rand_key_x = rand() % BOARD_HEIGHT;
+		rand_key_y = rand() % BOARD_LENGHT;
+	} while (!is_full() && board[rand_key_x][rand_key_y] != 0);
+	board[rand_key_x][rand_key_y] = rand_key;
+}
+void print_state()
+{
+	cout << '\n';
+	for (int i = 0; i < BOARD_HEIGHT; ++i) {
+		for (int j = 0; j < BOARD_LENGHT; ++j) {
+			cout << std::setw(5);
+			if (!board[i][j]) cout << '-';
+			else cout << board[i][j];
+		}
+		cout << endl;
+	}
+	cout << "\n    score: " << score << '\n';
+}
+char get_user_command()
+{
+	char command;
+	command = _getch();
+	if (command == 'w' || command == 'W') {
+		command_state = Command_state::UP;
+		return true;
+	}
+	if (command == 'a' || command == 'A') {
+			command_state = Command_state::LEFT;
+			return true;
+	}
+	if (command == 'x' || command == 'X'
+	    || command == 's' || command == 'S') {
+			command_state = Command_state::DOWN;
+			return true;
+	}
+	if (command == 'd' || command == 'D') {
+			command_state = Command_state::RIGHT;
+			return true;
+	}
+	if (command == 'q' || command == 'Q')
+		return command;
+	return false;
+}
+bool is_full()
+{
+	bool isFull = true;
+	for (int i = 0; i < BOARD_HEIGHT; ++i)
+		for (int j = 0; j < BOARD_LENGHT; ++j)
+			if (!board[i][j])
+				isFull = false;
+	return isFull;
+}
+bool move_keys(int board[][BOARD_LENGHT])
+{
+	bool move_made = false;
+	if (command_state == Command_state::UP) {
+		for (int j = 0; j < BOARD_LENGHT; ++j) {
+			for (int i = 0; i < BOARD_HEIGHT; ++i) {
+				for (int iterator = 1; iterator < BOARD_HEIGHT; ++iterator) {
+					int k = iterator;
+					while (k >= 1 && !board[k - 1][j]) {
+						board[k - 1][j] = board[k][j];
+						board[k][j] = 0;
+						if (board[k - 1][j])
+							move_made = true;
+						--k;
+					}
+				}
+					if (board[i][j] == board[i + 1][j]) {
+						score += board[i][j] += board[i + 1][j];
+						board[i + 1][j] = 0;
+						if (board[i][j] >= 2048)
+							game_state = Game_state::WON;
+						if (board[i][j])
+							move_made = true;
+					}
+			}
+		}
+	}
+	if (command_state == Command_state::DOWN) {
+		for (int j = 0; j < BOARD_LENGHT; ++j) {
+			for (int i = BOARD_HEIGHT - 1; i >= 0; --i) {
+				for (int it = BOARD_HEIGHT - 2; it >= 0; --it) {
+					int k = it;
+					while (k < BOARD_HEIGHT - 1 && !board[k + 1][j]) {
+						board[k + 1][j] = board[k][j];
+						board[k][j] = 0;
+						if (board[k + 1][j])
+							move_made = true;
+						++k;
+					}
+				}
+				if (board[i][j] == board[i - 1][j]) {
+					score += board[i][j] += board[i - 1][j];
+					board[i - 1][j] = 0;
+					if (board[i][j] >= 2048)
+						game_state = Game_state::WON;
+					if (board[i][j])
+						move_made = true;
+				}
+			}
+		}
+	}
+	if (command_state == Command_state::LEFT) {
+		for (int i = 0; i < BOARD_LENGHT; ++i) {
+			for (int j = 1; j < BOARD_LENGHT; ++j) {
+				for (int it = 1; it < BOARD_LENGHT; ++it) {
+					int k = it;
+					while (k >= 1 && !board[i][k - 1]) {
+						board[i][k - 1] = board[i][k];
+						board[i][k] = 0;
+						if (board[i][k - 1])
+							move_made = true;
+						--k;
+					}
+				}
+				if (board[i][j] == board[i][j - 1]) {
+					score += board[i][j - 1] += board[i][j];
+					board[i][j] = 0;
+					if (board[i][j - 1] >= 2048)
+						game_state = Game_state::WON;
+					if (board[i][j - 1])
+						move_made = true;
+				}
+			}
+		}
+	}
+	if (command_state == Command_state::RIGHT) {
+		for (int i = 0; i < BOARD_LENGHT; ++i) {
+			for (int j = BOARD_LENGHT - 2; j >= 0; --j) {
+				for (int it = BOARD_LENGHT - 2; it >= 0; --it) {
+					int k = it;
+					while (k < BOARD_LENGHT - 1 && !board[i][k + 1]) {
+						board[i][k + 1] = board[i][k];
+						board[i][k] = 0;
+						if (board[i][k + 1])
+							move_made = true;
+						++k;
+					}
+				}
+				if (board[i][j] == board[i][j + 1]) {
+					score += board[i][j + 1] += board[i][j];
+					board[i][j] = 0;
+					if (board[i][j + 1] >= 2048)
+						game_state = Game_state::WON;
+					if (board[i][j + 1])
+						move_made = true;
+				}
+			}
+		}
+	}
+	return move_made;
+}
+void start_game()
+{
+	is_processing = true;
+	bool continuing_set = false;
+	char user_command = 0;
+	generate_rand_key();
+	generate_rand_key();
+	while (is_processing) {
+		system("CLS");
+		print_state();
+		do { user_command = get_user_command(); } while (!user_command);
+		if (user_command == 'q' || user_command == 'Q')
+			is_processing = false;
+		else {
+			if (move_keys(board)) generate_rand_key();
+			if (!continuing_set && game_state == Game_state::WON) {
+				system("CLS");
+				print_state();
+				if (is_continuing()) continuing_set = true;
+				else is_processing = false;
+			}
+			if (is_full() && is_lost()) is_processing = false;
+		}
+	}
+}
+bool is_lost() {
+	int board_copy[BOARD_HEIGHT][BOARD_LENGHT];
+	for (int i = 0; i < BOARD_HEIGHT; ++i)
+		for (int j = 0; j < BOARD_LENGHT; ++j) board_copy[i][j] = board[i][j];
+	int initial_score = score;
+	command_state = Command_state::UP;
+	if (move_keys(board_copy)) {
+		score = initial_score;
+		return false;
+	}
+	command_state = Command_state::DOWN;
+	if (move_keys(board_copy)) {
+		score = initial_score;
+		return false;
+	}
+	command_state = Command_state::LEFT;
+	if (move_keys(board_copy)) {
+		score = initial_score;
+		return false;
+	}
+	command_state = Command_state::RIGHT;
+	if (move_keys(board_copy)) {
+		score = initial_score;
+		return false;
+	}
+	game_state = Game_state::LOST;
+	return true;
+}
+bool is_continuing()
+{
+	cout << "\nYou won!\nPress \'Y\'"
+		 << " if you want to continue playing.\n"
+		 << "\nPress \'N\' if you want to quit.\n? ";
+	char option;
+	do {
+		option = _getch();
+		switch (option) {
+		case 'Y':
+			return true;
+			break;
+		case 'y':
+			return true;
+			break;
+		case 'n':
+			return false;
+			break;
+		case 'N':
+			return false;
+			break;
+		default:
+			break;
+		}
+	} while (true);
+}
